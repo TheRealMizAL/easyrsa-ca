@@ -1,0 +1,56 @@
+{
+    "defaultAction": "SCMP_ACT_LOG",
+    "archMap": [
+        {
+            "architecture": "SCMP_ARCH_X86_64",
+            "subArchitectures": [
+                "SCMP_ARCH_X86",
+                "SCMP_ARCH_X32"
+            ]
+        },
+        {
+            "architecture": "SCMP_ARCH_AARCH64",
+            "subArchitectures": [
+                "SCMP_ARCH_ARM"
+            ]
+        }
+    ],
+    "syscalls": [
+        {
+            "names": [
+                "fcntl",
+                "close",
+                "clone",
+                "clone3",
+                "execve",
+                "wait4",
+                "waitpid",
+                "rt_sigprocmask",
+                "rt_sigtimedwait",
+                "kill",
+                "setpgid",
+                "prctl",
+                "write",
+                "brk",
+                "mmap",
+                "munmap",
+                "mprotect",
+                "exit_group",
+                "fstat",
+                "fstatfs",
+                "fscontext",
+                "fsmount",
+                "openat",
+                "statx",
+                "readlinkat",
+                "sched_getaffinity",
+                "futex",
+                "madvise",
+                "epoll_pwait",
+                "epoll_ctl",
+                "epoll_create1"
+            ],
+            "action": "SCMP_ACT_ALLOW"
+        }
+    ]
+}

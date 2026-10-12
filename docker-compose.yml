@@ -1,0 +1,55 @@
+name: easyrsa-ca
+
+volumes:
+  container-pki:
+
+services:
+  easyrsa:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        EASYRSA_VERSION: "3.2.1"
+    image: internal-pki/easyrsa:3.2.1
+    container_name: easyrsa-ca
+    hostname: easyrsa-ca
+    restart: unless-stopped
+
+    security_opt:
+      - no-new-privileges:true
+      - seccomp:seccomp-profile.json
+
+    cap_drop:
+      - ALL
+
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m,uid=1001,gid=1001
+
+    network_mode: none
+
+    volumes:
+      - container-pki:/app/data/
+      - ./config:/app/config:ro
+
+    stdin_open: true
+    tty: false
+
+    environment:
+      EASYRSA_PKI: "/app/data/pki"
+      EASYRSA_VARS_FILE: "/app/config/vars"
+      EASYRSA_BATCH: 1
+      TZ: "UTC"
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+        labels: "service=easyrsa-ca"
+
+    healthcheck:
+      test: [ "CMD", "test", "-f", "/app/.initialized" ]
+      interval: 60s
+      timeout: 5s
+      retries: 2
+      start_period: 15s
