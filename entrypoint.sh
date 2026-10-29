@@ -1,19 +1,14 @@
 #!/bin/bash
 set -euo pipefail
 
+export EASYRSA_BATCH="${EASYRSA_BATCH:-1}"
 
-EASYRSA_PKI="${EASYRSA_PKI:-/app/pki}"
-EASYRSA_EASYRSA_VARS_FILE="${EASYRSA_EASYRSA_VARS_FILE:-/app/config/vars}"
-EASYRSA_BATCH="${EASYRSA_BATCH:-1}"
-
-readonly LOG_FILE="/app/logs/easyrsa.log"
 readonly EASYRSA_BIN="/usr/local/bin/easyrsa"
-readonly INIT_MARKER="/app/.initialized"
+readonly PKI_LOCK_FILE="/app/data/pki/lock.file"
 
-readonly ROOT_CA_CERT="${EASYRSA_PKI}/root-ca.pem"
-readonly INTERMEDIATE_CSR="${EASYRSA_PKI}/reqs/intermediate-ca.req"
-readonly INTERMEDIATE_KEY="${EASYRSA_PKI}/private/intermediate-ca.key"
-readonly INTERMEDIATE_CERT="${EASYRSA_PKI}/issued/intermediate-ca.crt"
+readonly ROOT_CA_CERT="${EXTERNAL_PKI}/root-ca.pem"
+readonly INTERMEDIATE_KEY="${EXTERNAL_PKI}/intermediate-ca.key"
+readonly INTERMEDIATE_CERT="${EXTERNAL_PKI}/intermediate-ca.crt"
 readonly INTERMEDIATE_CHAIN="${EASYRSA_PKI}/chain.pem"
 
 log()  { printf '[%s] [INFO]  %s\n' "$(date -u +%FT%TZ)" "$*"; }
@@ -36,45 +31,12 @@ init_pki() {
     log "Initializing PKI directory structure..."
     "${EASYRSA_BIN}" init-pki
 
-    log "Generating intermediate CA private key and CSR..."
-    "${EASYRSA_BIN}" gen-req intermediate-ca nopass
+    touch "${EASYRSA_PKI}/serial"
+    mkdir -p "${EASYRSA_PKI}/certs_by_serial"
+    touch "${EASYRSA_PKI}/index.txt"
+    echo "unique_subject = no" > "${EASYRSA_PKI}/index.txt.attr"
 
-    chmod 0600 "${INTERMEDIATE_KEY}"
-    chmod 0644 "${INTERMEDIATE_CSR}"
-
-    touch "${INIT_MARKER}"
-
-    sep
-    log "PKI initialized. Manual steps required to complete setup:"
-    sep
-    log ""
-    log "  Step 1. Copy the CSR from the container to the Linux host:"
-    log "          docker cp easyrsa-ca:${INTERMEDIATE_CSR} ./intermediate-ca.req"
-    log ""
-    log "  Step 2. Transfer the CSR to the Windows host with CA access:"
-    log "          scp ./intermediate-ca.req user@windows-host:C:\\Temp\\"
-    log ""
-    log "  Step 3. Submit the CSR to Windows CA (run on Windows host):"
-    log "          certreq -submit -attrib \"CertificateTemplate:SubCA\" \\"
-    log "                  C:\\Temp\\intermediate-ca.req C:\\Temp\\intermediate-ca.crt"
-    log ""
-    log "          Alternatively, via web enrollment UI:"
-    log "          https://<ca-host>/certsrv -> Request a certificate ->"
-    log "          Advanced certificate request -> paste .req file contents"
-    log ""
-    log "  Step 4. Transfer the signed certificate back to the Linux host:"
-    log "          scp user@windows-host:C:\\Temp\\intermediate-ca.crt ./"
-    log ""
-    log "  Step 5. Transfer the Windows Root CA certificate to the Linux host:"
-    log "          scp user@windows-host:C:\\Temp\\root-ca.pem ./"
-    log ""
-    log "  Step 6. Copy both files into the container:"
-    log "          docker cp ./root-ca.pem      easyrsa-ca:${ROOT_CA_CERT}"
-    log "          docker cp ./intermediate-ca.crt easyrsa-ca:${INTERMEDIATE_CERT}"
-    log ""
-    log "  Step 7. Restart the container:"
-    log "          docker compose restart easyrsa"
-    sep
+    log "PKI initialized"
 }
 
 
@@ -118,9 +80,15 @@ build_chain() {
     chmod 0644 "${INTERMEDIATE_CHAIN}"
 
     if [ ! -f "${EASYRSA_PKI}/ca.crt" ]; then
-        cp "${ROOT_CA_CERT}" "${EASYRSA_PKI}/ca.crt"
+        cp "${INTERMEDIATE_CERT}" "${EASYRSA_PKI}/ca.crt"
         chmod 0644 "${EASYRSA_PKI}/ca.crt"
-        log "Root CA imported into PKI trust store"
+        log "Intermediate CA imported into PKI trust store"
+    fi
+
+    if [ ! -f "${EASYRSA_PKI}/private/ca.key" ]; then
+        cp "${INTERMEDIATE_KEY}" "${EASYRSA_PKI}/private/ca.key"
+        chmod 0644 "${EASYRSA_PKI}/private/ca.key"
+        log "Intermediate key imported into PKI trust store"
     fi
 
     log "Chain assembled: ${INTERMEDIATE_CHAIN}"
@@ -162,7 +130,7 @@ stay_alive() {
     log "    docker cp easyrsa-ca:${EASYRSA_PKI}/private/<name>.key ./"
     sep
 
-    exec tail -f "${LOG_FILE}"
+    exec tail -f /dev/null
 }
 
 
@@ -171,9 +139,11 @@ main() {
 
     check_prerequisites
 
-    if [ ! -f "${INIT_MARKER}" ]; then
+    if [ ! -f "${PKI_LOCK_FILE}" ]; then
         warn "PKI not initialized. Running first-time setup..."
         init_pki
+    else 
+        warn "PKI already exists. Skip..."
     fi
 
     local notified_root=0
@@ -183,7 +153,6 @@ main() {
         if [ ! -f "${ROOT_CA_CERT}" ]; then
             if [ "${notified_root}" -eq 0 ]; then
                 warn "Awaiting root CA certificate at: ${ROOT_CA_CERT}"
-                warn "Refer to setup instructions in the log above"
                 notified_root=1
             fi
             sleep 10
@@ -193,7 +162,6 @@ main() {
         if [ ! -f "${INTERMEDIATE_CERT}" ]; then
             if [ "${notified_intermediate}" -eq 0 ]; then
                 warn "Awaiting signed certificate at: ${INTERMEDIATE_CERT}"
-                warn "Refer to setup instructions in the log above"
                 notified_intermediate=1
             fi
             sleep 10
