@@ -3,14 +3,18 @@ name: easyrsa-ca
 volumes:
   container-pki:
 
+secrets:
+  ca_pass:
+    file: ./ca.pass
+
 services:
   easyrsa:
     build:
       context: .
       dockerfile: Dockerfile
       args:
-        EASYRSA_VERSION: "3.2.1"
-    image: internal-pki/easyrsa:3.2.1
+        EASYRSA_VERSION: "3.2.7"
+    image: internal-pki/easyrsa:3.2.7
     container_name: easyrsa-ca
     hostname: easyrsa-ca
     restart: unless-stopped
@@ -27,17 +31,24 @@ services:
 
     network_mode: none
 
+    secrets:
+      - ca_pass
+
     volumes:
       - container-pki:/app/data/
+      - ./external-pki:/app/data/external-pki:ro
       - ./config:/app/config:ro
 
     stdin_open: true
     tty: false
 
     environment:
+      EASYRSA_PASSIN: "file:/run/secrets/ca_pass"
+      EASYRSA_PASSOUT: "file:/run/secrets/ca_pass"
       EASYRSA_PKI: "/app/data/pki"
+      EXTERNAL_PKI: "/app/data/external-pki"
       EASYRSA_VARS_FILE: "/app/config/vars"
-      EASYRSA_BATCH: 1
+      EASYRSA_EXT: "/app/config/x509-types"
       TZ: "UTC"
 
     logging:
@@ -48,7 +59,7 @@ services:
         labels: "service=easyrsa-ca"
 
     healthcheck:
-      test: [ "CMD", "test", "-f", "/app/.initialized" ]
+      test: [ "CMD", "test", "-f", "/app/data/pki/lock.file" ]
       interval: 60s
       timeout: 5s
       retries: 2
