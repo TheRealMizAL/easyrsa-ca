@@ -3,3 +3,6 @@
 *.key
 *.pem
 ca.pass
+
+config/x509-types/*
+!config/x509-types/COMMON
