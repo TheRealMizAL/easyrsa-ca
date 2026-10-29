@@ -30,9 +30,8 @@ RUN addgroup -g 1001 easyrsa && \
     --shell /sbin/nologin \
     easyrsa
 
-RUN mkdir -p /app/data/pki /app/config /app/logs && \
+RUN mkdir -p /app/data/pki /app/config && \
     chmod 700 /app/data/pki && \
-    chmod 760 /app/logs && \
     chmod 755 /app/config
 
 RUN chown -R easyrsa:easyrsa /app
@@ -45,11 +44,14 @@ RUN apk add --no-cache \
     bash && \
     rm -rf /var/cache/apk/*
 
+COPY --from=build --chown=root:easyrsa /tmp/easyrsa/easyrsa /usr/local/bin/easyrsa
+COPY --from=build --chown=easyrsa:easyrsa /tmp/easyrsa/x509-types /usr/local/bin/x509-types
+
+RUN chmod -R 0550 /usr/local/bin/easyrsa
+RUN chmod -R 0750 /usr/local/bin/x509-types
+
 COPY --chown=easyrsa:easyrsa entrypoint.sh entrypoint.sh
 RUN chmod 0550 entrypoint.sh
-
-COPY --from=build --chown=root:easyrsa /tmp/easyrsa/easyrsa /usr/local/bin/easyrsa
-RUN chmod 0550 /usr/local/bin/easyrsa
 
 USER easyrsa:easyrsa
 EXPOSE 0
