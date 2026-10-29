@@ -1,0 +1,26 @@
+set_var EASYRSA_EXT_DIR             "/app/config/x509-types"
+set_var EASYRSA_DN					"org"
+
+set_var EASYRSA_REQ_COUNTRY         "RU"
+set_var EASYRSA_REQ_PROVINCE	    "Moscow region"
+set_var EASYRSA_REQ_CITY	        "Moscow"
+set_var EASYRSA_REQ_ORG	            "ACME LLC"
+set_var EASYRSA_REQ_EMAIL	        "mail@infsec.ru"
+set_var EASYRSA_REQ_OU		        "InfSec"
+
+set_var EASYRSA_ALGO				ec
+# EASYRSA_KEY_SIZE is not suitable for the EC key algo
+# set_var EASYRSA_KEY_SIZE			4096
+set_var EASYRSA_CURVE				secp256r1
+set_var EASYRSA_DIGEST				sha512
+
+set_var EASYRSA_CERT_EXPIRE			365
+set_var EASYRSA_CRL_DAYS			180
+set_var EASYRSA_PRE_EXPIRY_WINDOW	30
+
+
+set_var	EASYRSA_BC_CRIT				1
+set_var	EASYRSA_KU_CRIT				1
+
+set_var EASYRSA_BATCH				1
+set_var EASYRSA_NO_INLINE           1
