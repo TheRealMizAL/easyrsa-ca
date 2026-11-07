@@ -71,7 +71,7 @@ if ($LASTEXITCODE -ne 0 -or "$running".Trim() -ne 'true') {
 Write-Verbose "Docker container is active"
 
 $san = "DNS:$Fqdn,DNS:$($Fqdn.Split('.')[0]),IP:$Ip"
-$subjectName = $AltCN ? $AltCN : $Fqdn
+$subjectName = if ($AltCN) {$AltCN} else {$Fqdn}
 
 $algoArgs = if ($AlgType -eq "RSA") {
     Write-Verbose "Using RSA with key size of $KeyLen bits"
