@@ -8,7 +8,7 @@ readonly PKI_LOCK_FILE="/app/data/pki/lock.file"
 
 readonly ROOT_CA_CERT="${EXTERNAL_PKI}/root-ca.pem"
 readonly INTERMEDIATE_KEY="${EXTERNAL_PKI}/intermediate-ca.key"
-readonly INTERMEDIATE_CERT="${EXTERNAL_PKI}/intermediate-ca.crt"
+readonly INTERMEDIATE_CERT="${EXTERNAL_PKI}/intermediate-ca.pem"
 readonly INTERMEDIATE_CHAIN="${EASYRSA_PKI}/chain.pem"
 
 log()  { printf '[%s] [INFO]  %s\n' "$(date -u +%FT%TZ)" "$*"; }
