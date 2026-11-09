@@ -6,3 +6,4 @@ ca.pass
 
 config/x509-types/*
 !config/x509-types/COMMON
+!config/x509-types/intermediate-certs
